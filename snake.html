@@ -1,0 +1,383 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="generator" content="Stebunov Vladimir" />
+<meta name="description" content="Snake game" />
+<meta name="keywords" content="game, javascript, canvas, example" />
+<script>
+var EMPTY = 0;
+var GOLD = 3;
+var HEAD = 4;
+var WALL = 1;
+var TAIL = 7;
+
+var SPEED = 0.2;
+var WALL_GENERATED = 10;
+var STARTUP_WALLS_ITERATION = 150;
+
+var BOX_SIZE = 20;
+var PIXEL_SIZE = 20;
+
+var screen_width = 2 * PIXEL_SIZE + BOX_SIZE * PIXEL_SIZE;
+
+var cell = [];
+var head_position = [];
+var tail_stack = [];
+var tail_length = 0;
+var path = [];
+var rule_y = 0;
+var rule_x = 0;
+
+var context = null;
+var intervalID = null;
+
+window.onload = function () {
+	var main = document.getElementById("main"), i, j, reset_button;
+	context = main.getContext("2d");
+	
+	main.onclick = click_canvas;
+	main.onmousemove = move_mouse;
+	reset_button = document.getElementById("reset");
+	reset_button.onclick = reset_game;
+
+	reset_game();
+	draw_buttons();
+
+	redraw_cell();
+
+};
+
+function reset_game() {
+	window.clearInterval(intervalID);
+
+	tail_stack = [];
+	tail_length = 0;
+	path = [];
+	head_position = [];
+
+	for (i = 0; i < BOX_SIZE; i += 1) {
+		cell[i] = [];
+		for (j = 0; j < BOX_SIZE; j += 1) {
+			cell[i][j] = EMPTY;
+		}
+	}
+
+	for (i = 0; i < STARTUP_WALLS_ITERATION; i += 1) {
+		generate_wall();
+	}
+	generate_gold();
+	
+	head_position = [Math.round(Math.random() * (BOX_SIZE - 1)),
+				  Math.round(Math.random() * (BOX_SIZE -1))];
+
+	if (GOLD === cell[head_position[0]][head_position[1]]) {
+		generate_gold();
+	}
+	cell[head_position[0]][head_position[1]] = HEAD; 
+
+	path = find_path_a_asterisk(head_position);
+
+	intervalID = window.setInterval(tick, SPEED * 1000);
+}
+
+var race = false;
+function tick() {
+	var i, t;
+	if (true === race) {
+		console.log("fucking race!");
+	}	
+	race = true;
+
+	if (path.length !== 0) {
+		cell[head_position[0]][head_position[1]] =  0;
+
+		tail_stack.unshift(head_position);
+
+		for (i = 0; i < tail_stack.length; i += 1) {
+			t = tail_stack[i];
+			cell[t[0]][t[1]] = 0;
+		}
+
+		if (tail_stack.length > tail_length) {
+			tail_stack.pop();
+		}
+
+		head_position = path.shift();
+
+		for (i = 0; i < tail_stack.length; i += 1) {
+			t = tail_stack[i];
+			cell[t[0]][t[1]] = TAIL;			
+		}
+
+		cell[head_position[0]][head_position[1]] =  HEAD;
+		
+	if (0 === path.length) {
+			tail_length += 1;
+			for (i = 0; i < WALL_GENERATED; i += 1) {
+				generate_wall();
+			}
+			generate_gold();
+			update_score();
+			path = find_path_a_asterisk(head_position);
+		}
+	}
+	redraw_cell();
+	draw_buttons();
+	draw_rulers();
+	race = false;
+}
+
+function generate_gold() {
+	var i, j, max, neighbors, g_c_x, g_c_y;
+	max = 0;
+	for (i = 0; i < BOX_SIZE; i += 1) {
+		for (j = 0; j < BOX_SIZE; j += 1) {
+			neighbors = 0;
+			if ( EMPTY === cell[i][j] ) {
+				if (i > 0  && WALL === cell[i - 1][j]) {
+					neighbors += 1;
+				}
+				if (i < (BOX_SIZE - 1)  && WALL === cell[i + 1][j]) {
+					neighbors += 1;
+				}
+				if (j > 0  && WALL === cell[i][j - 1]) {
+					neighbors += 1;
+				}
+				if (j < (BOX_SIZE - 1)  && WALL === cell[i][j + 1]) {
+					neighbors += 1;
+				}
+				if (max < neighbors) {
+					max = neighbors;
+					g_c_x = i;
+					g_c_y = j;
+				}
+			}
+		}
+	}
+	cell[g_c_x][g_c_y] = GOLD;
+}
+
+function generate_wall() {
+	var wall = [Math.round(Math.random() * (BOX_SIZE - 1)),
+		Math.round(Math.random() * (BOX_SIZE - 1))];
+	if (EMPTY === cell[wall[0]][wall[1]]) {
+		cell[wall[0]][wall[1]] = WALL;
+	}
+}
+
+function find_path_a_asterisk(start) {
+	var closed = [], q = [[start]], p, p_n, x, p2;
+	while (q.length > 0) {
+		p = q.shift();
+		p_n = [].concat(p);
+		x = p.pop();
+		if (closed.in_array([x[0], x[1]])) {
+			continue;
+		}
+		if (GOLD === cell[x[0]][x[1]]) {
+			return p_n;
+		}
+		closed.push([x[0], x[1] ]);
+		
+		if (x[0] > 0 && is_walked_cell([x[0] - 1, x[1]])) {
+			p2 = [].concat(p_n);
+			p2.push([x[0] - 1, x[1]]);
+			q.push(p2);
+		} 
+		if (x[0] < (BOX_SIZE - 1) && is_walked_cell([x[0] + 1, x[1]])) {
+			p2 = [].concat(p_n);
+			p2.push([x[0] + 1, x[1]]);
+			q.push(p2);
+		} 
+
+		if (x[1] > 0 && is_walked_cell([x[0], x[1] - 1])) {
+			p2 = [].concat(p_n);
+			p2.push([x[0], x[1] - 1]);
+			q.push(p2);
+		} 
+
+		if (x[1] < (BOX_SIZE - 1) && is_walked_cell([x[0], x[1] + 1])) {
+ 			p2 = [].concat(p_n);
+			p2.push([x[0], x[1] + 1]);
+			q.push(p2);
+		}
+	}
+	return [];
+}
+
+function is_walked_cell(x) {
+	if (x[0] < 0 || x[0] > (BOX_SIZE - 1) || x[1] < 0 || x[1] > (BOX_SIZE - 1)) {
+		return false;
+	}
+	return (EMPTY === cell[x[0]][x[1]]) || (GOLD === cell[x[0]][x[1]]);
+
+}
+
+function redraw_cell() {
+	var i, j;
+	for (i = 0; i < BOX_SIZE; i += 1) {
+		for (j = 0; j < BOX_SIZE; j += 1) {
+			switch (cell[i][j]) {
+			case EMPTY:
+				context.fillStyle = "white";
+				break;
+			case WALL:
+				context.fillStyle = "red";
+				break;
+			case GOLD:
+				context.fillStyle = "yellow";
+				break;
+			case HEAD:
+				context.fillStyle = "black";
+				break;
+			case TAIL:
+				context.fillStyle = "darkgreen";
+				break;
+			default:
+				context.fillStyle = "purple";
+			}
+			context.fillRect(PIXEL_SIZE + i * PIXEL_SIZE, PIXEL_SIZE + j *
+					PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+		}
+	}
+
+}
+
+function draw_buttons() {
+	var i;
+	for (i = 0; i < BOX_SIZE; i += 1) {
+		context.fillStyle = "gold";
+		context.fillRect(PIXEL_SIZE + i * PIXEL_SIZE, 0, PIXEL_SIZE, PIXEL_SIZE);
+		context.strokeRect(PIXEL_SIZE + i * PIXEL_SIZE, 0, PIXEL_SIZE,
+				PIXEL_SIZE);
+
+		context.fillRect(0, PIXEL_SIZE + i * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+		context.strokeRect(0, PIXEL_SIZE + i * PIXEL_SIZE, PIXEL_SIZE,
+				PIXEL_SIZE);
+
+		context.fillRect(PIXEL_SIZE + i * PIXEL_SIZE, screen_width - PIXEL_SIZE,
+				PIXEL_SIZE, PIXEL_SIZE);
+		context.strokeRect(PIXEL_SIZE + i * PIXEL_SIZE, screen_width -
+				PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+
+		context.fillRect(screen_width - PIXEL_SIZE, PIXEL_SIZE + i * PIXEL_SIZE,
+				PIXEL_SIZE, PIXEL_SIZE);
+		context.strokeRect(screen_width - PIXEL_SIZE, PIXEL_SIZE + i *
+				PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+	}
+
+}
+
+function draw_rulers() {
+	context.fillStyle = "rgba(0, 0, 200, 0.5)";
+	if (1 <= rule_y && BOX_SIZE >= rule_y) {
+		context.fillRect(0, PIXEL_SIZE * rule_y, screen_width, PIXEL_SIZE);
+	}
+	if (1 <= rule_x && BOX_SIZE >= rule_x) {
+		context.fillRect(PIXEL_SIZE * rule_x, 0, PIXEL_SIZE, screen_width);
+	}
+}
+
+function move_mouse(ev) {
+	var x, y;
+	x = ev.clientX + (window.pageXOffset || 0) - this.offsetLeft;
+	y = ev.clientY + (window.pageYOffset || 0) - this.offsetTop;
+	rule_x = get_row(x);
+	rule_y = get_row(y);
+}
+
+function click_canvas(ev) {
+	var x, y, row_x, row_y, i, tmp;
+	x = ev.clientX + (window.pageXOffset || 0) - this.offsetLeft;
+	y = ev.clientY + (window.pageYOffset || 0) - this.offsetTop;
+	row_x = get_row(x);
+	row_y = get_row(y);
+
+	if (head_position[0] === row_x - 1) {
+		return;
+	}
+	if (head_position[1] === row_y - 1) {
+		return;
+	}
+
+	for (i = 0; i < tail_stack.length; i += 1) {
+		if (tail_stack[i][0] === row_x - 1) {
+			return;
+		}
+		if (tail_stack[i][1] === row_y - 1) {
+			return;
+		}
+	}
+
+	if (row_y === 0 && row_x > -1 && row_x < (BOX_SIZE + 1)) {
+		row_x -= 1;
+		elem = cell[row_x].shift();
+		cell[row_x].push(elem);
+	} else if (row_y === (BOX_SIZE + 1) && row_x > -1 && row_x < (BOX_SIZE + 1)) {
+		row_x -= 1;
+		elem = cell[row_x].pop();
+		cell[row_x].unshift(elem);
+	}
+
+	if (row_x === 0 && row_y > -1 && row_y < (BOX_SIZE + 1)) {
+		row_y -= 1;
+		for (i = 0; i < (BOX_SIZE - 1); i += 1) {
+			tmp = cell[i + 1][row_y];
+			cell[i + 1][row_y] = cell[i][row_y];
+			cell[i][row_y] = tmp;
+		}
+	} else if (row_x === (BOX_SIZE + 1) && row_y > -1 && row_y < (BOX_SIZE + 1)) {
+		row_y -= 1;
+		for (i = (BOX_SIZE - 2); i > -1; i -= 1) {
+			tmp = cell[i + 1][row_y];
+			cell[i + 1][row_y] = cell[i][row_y];
+			cell[i][row_y] = tmp;
+		}
+	}
+
+	path = find_path_a_asterisk(head_position);
+	redraw_cell();
+	draw_buttons();
+	draw_rulers();
+}
+
+function update_score() {
+	var indicator;
+	indicator = document.getElementById( 'score' );
+	indicator.innerHTML = tail_length;
+}
+
+function get_row(x) {
+	if (x < 0 || x > screen_width) {
+		return -1;
+	}
+	return Math.floor(x / PIXEL_SIZE);
+}
+
+Array.prototype.in_array = function (p_val) {
+	var i, l;
+	if (undefined === p_val) {
+		return false;
+	}
+	for (i = 0, l = this.length; i < l; i += 1)	{
+		if (this[i][0] === p_val[0] && this[i][1] === p_val[1]) {
+			return true;
+		}
+	}
+	return false;
+}
+</script>
+</head>
+<body>
+	<div class=container>
+	<h1>Змейка наоборот</h1>
+	<p>Цель игры: нарастить как можно большую змейку. Проблема только одна,
+	змейка не должна попасть в тупик. Управлять можно полем: нажимая на желтые
+	кнопочки, мы двигаем стены. Змейка есть золотые монеты и от них растет.</p>
+	<p>Очков заработано:<span id=score>0</span></p>
+	<p><canvas id='main' width=440 height=440 style="border: 1px solid black" ></canvas></p>
+	<p><button id='reset'>Сброс</button></p>
+
+</div>
+</body>
+</html>

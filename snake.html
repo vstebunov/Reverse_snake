@@ -293,7 +293,7 @@ function draw_rulers() {
 	if (1 <= rule_y && BOX_SIZE >= rule_y && (rule_x === 0 || rule_x === BOX_SIZE + 1)) {
 		context.fillRect(0, PIXEL_SIZE * rule_y, screen_width, PIXEL_SIZE);
 	}
-	if (1 <= rule_x && BOX_SIZE >= rule_x) {
+	if (1 <= rule_x && BOX_SIZE >= rule_x && (rule_y === 0 || rule_y === BOX_SIZE + 1)) {
 		context.fillRect(PIXEL_SIZE * rule_x, 0, PIXEL_SIZE, screen_width);
 	}
 }
@@ -356,9 +356,6 @@ function click_canvas(ev) {
 	}
 
 	path = find_path_a_asterisk(head_position);
-	redraw_cell();
-	draw_buttons();
-	draw_rulers();
 }
 
 function update_score() {

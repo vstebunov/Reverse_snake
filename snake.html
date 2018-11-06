@@ -29,7 +29,6 @@ var rule_y = 0;
 var rule_x = 0;
 
 var context = null;
-var intervalID = null;
 
 window.onload = function () {
 	var main = document.getElementById("main"), i, j, reset_button;
@@ -48,7 +47,6 @@ window.onload = function () {
 };
 
 function reset_game() {
-	window.clearInterval(intervalID);
 
 	tail_stack = [];
 	tail_length = 0;
@@ -77,16 +75,11 @@ function reset_game() {
 
 	path = find_path_a_asterisk(head_position);
 
-	intervalID = window.setInterval(tick, SPEED * 1000);
+    window.requestAnimationFrame(tick);
 }
 
-var race = false;
 function tick() {
 	var i, t;
-	if (true === race) {
-		console.log("fucking race!");
-	}	
-	race = true;
 
 	if (path.length !== 0) {
 		cell[head_position[0]][head_position[1]] =  0;
@@ -124,7 +117,7 @@ function tick() {
 	redraw_cell();
 	draw_buttons();
 	draw_rulers();
-	race = false;
+    window.requestAnimationFrame(tick);
 }
 
 function generate_gold() {
@@ -244,7 +237,7 @@ function redraw_cell() {
 }
 
 function draw_buttons() {
-	var i;
+	var i, x, y;
 	for (i = 0; i < BOX_SIZE; i += 1) {
 		context.fillStyle = "gold";
 		context.fillRect(PIXEL_SIZE + i * PIXEL_SIZE, 0, PIXEL_SIZE, PIXEL_SIZE);
@@ -264,13 +257,40 @@ function draw_buttons() {
 				PIXEL_SIZE, PIXEL_SIZE);
 		context.strokeRect(screen_width - PIXEL_SIZE, PIXEL_SIZE + i *
 				PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+
+        context.fillStyle = "black";
+        x = PIXEL_SIZE + PIXEL_SIZE * i;
+        context.beginPath();
+        context.moveTo(x + PIXEL_SIZE / 2,                  PIXEL_SIZE / 2 + PIXEL_SIZE / 4);
+        context.lineTo(x + PIXEL_SIZE / 2 + PIXEL_SIZE / 4, PIXEL_SIZE );
+        context.lineTo(x + PIXEL_SIZE / 4,                  PIXEL_SIZE );
+        context.fill();
+
+        context.beginPath();
+        context.moveTo(x + PIXEL_SIZE / 2,                  screen_width - PIXEL_SIZE / 2 + PIXEL_SIZE / 4);
+        context.lineTo(x + PIXEL_SIZE / 2 + PIXEL_SIZE / 4, screen_width - PIXEL_SIZE );
+        context.lineTo(x + PIXEL_SIZE / 4,                  screen_width - PIXEL_SIZE );
+        context.fill();
+
+        y = PIXEL_SIZE + PIXEL_SIZE * i;
+        context.beginPath();
+        context.moveTo(PIXEL_SIZE / 2 + PIXEL_SIZE / 4, y + PIXEL_SIZE / 2);
+        context.lineTo(PIXEL_SIZE,                      y + PIXEL_SIZE / 2 + PIXEL_SIZE / 4);
+        context.lineTo(PIXEL_SIZE,                      y + PIXEL_SIZE / 4);
+        context.fill();
+
+        context.beginPath();
+        context.moveTo(screen_width - PIXEL_SIZE / 2 + PIXEL_SIZE / 4, y + PIXEL_SIZE / 2);
+        context.lineTo(screen_width - PIXEL_SIZE,                      y + PIXEL_SIZE / 2 + PIXEL_SIZE / 4);
+        context.lineTo(screen_width - PIXEL_SIZE,                      y + PIXEL_SIZE / 4);
+        context.fill();
 	}
 
 }
 
 function draw_rulers() {
 	context.fillStyle = "rgba(0, 0, 200, 0.5)";
-	if (1 <= rule_y && BOX_SIZE >= rule_y) {
+	if (1 <= rule_y && BOX_SIZE >= rule_y && (rule_x === 0 || rule_x === BOX_SIZE + 1)) {
 		context.fillRect(0, PIXEL_SIZE * rule_y, screen_width, PIXEL_SIZE);
 	}
 	if (1 <= rule_x && BOX_SIZE >= rule_x) {
@@ -373,7 +393,8 @@ Array.prototype.in_array = function (p_val) {
 	<h1>Змейка наоборот</h1>
 	<p>Цель игры: нарастить как можно большую змейку. Проблема только одна,
 	змейка не должна попасть в тупик. Управлять можно полем: нажимая на желтые
-	кнопочки, мы двигаем стены. Змейка есть золотые монеты и от них растет.</p>
+	кнопочки, мы двигаем стены. Змейка есть золотые монеты и от них растет.
+    Двигать поле под змейкой нельзя.</p>
 	<p>Очков заработано:<span id=score>0</span></p>
 	<p><canvas id='main' width=440 height=440 style="border: 1px solid black" ></canvas></p>
 	<p><button id='reset'>Сброс</button></p>

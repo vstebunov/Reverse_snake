@@ -10,9 +10,9 @@ Just try : https://rawgithub.com/vstebunov/Reverse_snake/master/snake.html
 
 ## Usage
 
-Click on button with arrow and move row with bricks. 
-Snake always hungry and want eat golden blocks.
-Make your snake fat and long.
+* Click on button with arrow and move row with bricks. 
+* Snake always hungry and want eat golden blocks.
+* Make your snake fat and long.
 
 ## Contributing
 Pull requests are welcome.
